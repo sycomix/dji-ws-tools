@@ -44,15 +44,12 @@ class DJIws(object):
 
     @staticmethod
     def _unpad(s):
-        return s[:-ord(s[len(s)-1:])]
+        return s[:-ord(s[-1:])]
 
 
 def get_encoding():
     encoding = getattr(sys.stdin, "encoding", "")
-    if not encoding:
-        return "utf-8"
-    else:
-        return encoding.lower()
+    return "utf-8" if not encoding else encoding.lower()
 
 
 OPCODE_DATA = (websocket.ABNF.OPCODE_TEXT, websocket.ABNF.OPCODE_BINARY)
@@ -104,11 +101,7 @@ def parse_args():
 class RawInput:
 
     def raw_input(self, prompt):
-        if six.PY3:
-            line = input(prompt)
-        else:
-            line = raw_input(prompt)
-
+        line = input(prompt) if six.PY3 else raw_input(prompt)
         if ENCODING and ENCODING != "utf-8" and not isinstance(line, six.text_type):
             line = line.decode(ENCODING).encode("utf-8")
         elif isinstance(line, six.text_type):
@@ -129,8 +122,7 @@ class InteractiveConsole(RawInput, code.InteractiveConsole):
 
     def read(self):
         data = self.raw_input("> ")
-        buf_in = DJIws.encrypt(data)
-        return buf_in
+        return DJIws.encrypt(data)
 
 
 class NonInteractive(RawInput):
@@ -176,7 +168,7 @@ def main():
         except websocket.WebSocketException:
             return websocket.ABNF.OPCODE_CLOSE, None
         if not frame:
-            raise websocket.WebSocketException("Not a valid frame %s" % frame)
+            raise websocket.WebSocketException(f"Not a valid frame {frame}")
         elif frame.opcode in OPCODE_DATA:
             return frame.opcode, frame.data
         elif frame.opcode == websocket.ABNF.OPCODE_CLOSE:
@@ -197,11 +189,11 @@ def main():
             if not args.verbose and opcode in OPCODE_DATA:
                 msg = data
             elif args.verbose:
-                msg = "%s: %s" % (websocket.ABNF.OPCODE_MAP.get(opcode), data)
+                msg = f"{websocket.ABNF.OPCODE_MAP.get(opcode)}: {data}"
 
             if msg is not None:
                 if args.timings:
-                    console.write(str(time.time() - start_time) + ": " + msg)
+                    console.write(f"{str(time.time() - start_time)}: {msg}")
                 else:
                     console.write(msg)
 
